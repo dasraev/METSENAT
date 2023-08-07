@@ -25,7 +25,7 @@ class Sponsor(models.Model):
     spent_money = models.IntegerField(default=0)
     application_status = models.CharField(choices=application_status,max_length=20,default='new')
     payment_type = models.CharField(choices=payment_type,max_length=20,default='money_transfer')
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True,null=True)
 
     def __str__(self):
         return self.fullname
@@ -37,9 +37,8 @@ class Student(models.Model):
     university = models.ForeignKey('University',on_delete=models.SET_NULL,null=True)
     education_type = models.CharField(choices=education_type,max_length=20)
     contract_fee = models.IntegerField()
-    # sponsors = models.ManyToManyField(Sponsor,related_name='students',null=True)
     allocated_money = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True,null=True)
 
 
 class SponsorByStudent(models.Model):

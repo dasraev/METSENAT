@@ -11,6 +11,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from .query_params import *
+from django.db.models import Sum, Count
 
 
 class Custompagination(PageNumberPagination):
@@ -94,6 +95,7 @@ class StudentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(students, many=True)
         return paginator.get_paginated_response(serializer.data)
 
+
 class SponsorByStudentListCreateView(generics.ListCreateAPIView):
     serializer_class = SponsorByStudentSerializer
 
@@ -102,7 +104,7 @@ class SponsorByStudentListCreateView(generics.ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         student = get_object_or_404(Student, pk=kwargs['student_id'])
-        serializer = self.serializer_class(data=request.data,context={'student':student})
+        serializer = self.serializer_class(data=request.data, context={'student': student})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -114,11 +116,32 @@ class SponsorByStudentUpdateDeleteView(generics.UpdateAPIView, generics.DestroyA
 
     def get_object(self):
         return get_object_or_404(SponsorByStudent, pk=self.kwargs['id_sponsor_by_student'])
+
     def update(self, request, *args, **kwargs):
         student = self.get_object().student
 
-        serializer = self.get_serializer(self.get_object(),data=request.data,context={'student':student})
+        serializer = self.get_serializer(self.get_object(), data=request.data, context={'student': student})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class DashboardView(APIView):
+
+    @swagger_auto_schema(manual_parameters=get_date())
+    def get(self, request):
+        money = Student.objects.aggregate(paid_money=Sum('allocated_money'), asked_money=Sum('contract_fee'))
+        should_be_paid_money = money['asked_money'] - money['paid_money']
+
+        data = {"asked_money": money['asked_money'],
+                "paid_money": money['paid_money'],
+                "should_be_paid_money": should_be_paid_money}
+
+        if self.request.query_params.get('created_at'):
+            created_at = datetime.datetime.strptime(self.request.query_params.get('created_at'),"%d.%m.%Y")
+            number_of_students = Student.objects.filter(created_at__date=created_at).aggregate(number=Count('id'))['number']
+            number_of_sponsors = Sponsor.objects.filter(created_at__date=created_at).aggregate(number=Count('id'))['number']
+            data['number_of_students'] = number_of_students
+            data['number_of_sponsors'] = number_of_sponsors
+        return Response(data)
 
