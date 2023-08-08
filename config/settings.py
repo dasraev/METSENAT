@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'app',
     "debug_toolbar",
+    "requests",
     'rest_captcha',
 
 ]
@@ -133,3 +134,6 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
 }
+
+RECAPTCHA_PUBLIC_KEY = "6LcM640nAAAAACicDsONb3IY2rZsZY66d6J_XuvA"
+RECAPTCHA_PRIVATE_KEY = "6LcM640nAAAAAJgw57ul3ZJA0bo2Q5ikXb4EdGe5"

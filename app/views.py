@@ -145,3 +145,33 @@ class DashboardView(APIView):
             data['number_of_sponsors'] = number_of_sponsors
         return Response(data)
 
+
+# views.py
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.response import Response
+from rest_framework import status
+import requests
+from django.conf import settings
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    def post(self, request, *args, **kwargs):
+        recaptcha_response = request.data.get('recaptcha_response', None)
+
+        if not recaptcha_response:
+            return Response({'detail': 'reCAPTCHA response not provided.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        recaptcha_url = 'https://www.google.com/recaptcha/api/siteverify'
+        recaptcha_params = {
+            'secret': settings.RECAPTCHA_PRIVATE_KEY,
+            'response': recaptcha_response
+        }
+
+        response = requests.post(recaptcha_url, data=recaptcha_params)
+        recaptcha_result = response.json()
+
+        if not recaptcha_result.get('success', False):
+            return Response({'detail': 'reCAPTCHA verification failed.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().post(request, *args, **kwargs)
+
