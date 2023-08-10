@@ -1,11 +1,10 @@
-import django.conf.locale
 from rest_framework import serializers
-from .models import *
+from . import models
 
 
 class SponsorSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Sponsor
+        model = models.Sponsor
         fields = '__all__'
         read_only_fields = ['id', 'spent_money', 'created_at']
 
@@ -25,7 +24,7 @@ class SponsorSerializer(serializers.ModelSerializer):
 
 class UniversitySerializer(serializers.ModelSerializer):
     class Meta:
-        model = University
+        model = models.University
         fields = '__all__'
 
 
@@ -33,34 +32,34 @@ class StudentReadSerializer(serializers.ModelSerializer):
     university = UniversitySerializer(read_only=True)
 
     class Meta:
-        model = Student
+        model = models.Student
         fields = '__all__'
         read_only_fields = ['allocated_money']
 
 
 class StudentWriteSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Student
+        model = models.Student
         fields = '__all__'
         read_only_fields = ['allocated_money']
 
 
 class SponsorByStudentSerializer(serializers.ModelSerializer):
     class Meta:
-        model = SponsorByStudent
+        model = models.SponsorByStudent
         fields = '__all__'
         read_only_fields = ['student']
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        sponsor = Sponsor.objects.get(pk=representation['sponsor'])
+        sponsor = models.Sponsor.objects.get(pk=representation['sponsor'])
         representation['sponsor'] = {"id": sponsor.id, "fullname": sponsor.fullname}
         representation.pop('student')
         return representation
 
     def validate(self, attrs):
         student = self.context.get('student')
-        print(991,self.context,student)
+        print(991, self.context, student)
         sponsor = attrs.get('sponsor')
         sponsor_money = attrs.get("sponsor_money")
         if student.allocated_money + sponsor_money > student.contract_fee:
@@ -78,4 +77,4 @@ class SponsorByStudentSerializer(serializers.ModelSerializer):
         student.save()
         sponsor.spent_money += validated_data.get('sponsor_money')
         sponsor.save()
-        return SponsorByStudent.objects.create(student=student, **validated_data)
+        return models.SponsorByStudent.objects.create(student=student, **validated_data)

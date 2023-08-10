@@ -2,15 +2,15 @@ from rest_framework import generics, viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import *
+from . import models
 from rest_framework.exceptions import MethodNotAllowed
-from .serializers import *
+from . import serializers
 from rest_framework.pagination import PageNumberPagination
 import datetime
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
-from .query_params import *
+from . import query_params
 from django.db.models import Sum, Count
 from rest_framework_simplejwt.views import TokenObtainPairView
 import requests
@@ -24,12 +24,12 @@ class Custompagination(PageNumberPagination):
 
 
 class SponsorsListCreateView(generics.ListCreateAPIView):
-    serializer_class = SponsorSerializer
+    serializer_class = serializers.SponsorSerializer
     pagination_class = Custompagination
     pagination_class.page_size = 10
 
     def get_queryset(self):
-        queryset = Sponsor.objects.all()
+        queryset = models.Sponsor.objects.all()
         created_at = self.request.query_params.get('created_at', None)
         application_status = self.request.query_params.get('application_status', None)
         payment_amount = self.request.query_params.get('payment_amount', None)
@@ -53,7 +53,7 @@ class SponsorsListCreateView(generics.ListCreateAPIView):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @swagger_auto_schema(manual_parameters=sponsor_filter_by())
+    @swagger_auto_schema(manual_parameters=query_params.sponsor_filter_by())
     def get(self, request, format=None):
         paginatior = self.pagination_class()
         sponsors = paginatior.paginate_queryset(queryset=self.get_queryset(), request=request)
@@ -64,12 +64,12 @@ class SponsorsListCreateView(generics.ListCreateAPIView):
 
 
 class SponsorsDetailView(generics.RetrieveUpdateAPIView):
-    serializer_class = SponsorSerializer
-    queryset = Sponsor.objects.all()
+    serializer_class = serializers.SponsorSerializer
+    queryset = models.Sponsor.objects.all()
 
 
 class StudentViewSet(viewsets.ModelViewSet):
-    queryset = Student.objects.all()
+    queryset = models.Student.objects.all()
     pagination_class = Custompagination
 
     def destroy(self, request, *args, **kwargs):
@@ -77,12 +77,12 @@ class StudentViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         if self.action in ["create", "update", "partial_update", "destroy"]:
-            return StudentWriteSerializer
+            return serializers.StudentWriteSerializer
         else:
-            return StudentReadSerializer
+            return serializers.StudentReadSerializer
 
     def get_queryset(self):
-        queryset = Student.objects.all()
+        queryset = models.Student.objects.all()
         university_id = self.request.query_params.get('university_id')
         education_type = self.request.query_params.get('education_type')
         if university_id:
@@ -91,7 +91,7 @@ class StudentViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(education_type=education_type)
         return queryset
 
-    @swagger_auto_schema(manual_parameters=student_filter_by())
+    @swagger_auto_schema(manual_parameters=query_params.student_filter_by())
     def get(self, request):
         paginator = self.pagination_class()
         students = paginator.paginate_queryset(self.get_queryset(), request=request)
@@ -100,13 +100,13 @@ class StudentViewSet(viewsets.ModelViewSet):
 
 
 class SponsorByStudentListCreateView(generics.ListCreateAPIView):
-    serializer_class = SponsorByStudentSerializer
+    serializer_class = serializers.SponsorByStudentSerializer
 
     def get_queryset(self):
-        return SponsorByStudent.objects.filter(student_id=self.kwargs['student_id'])
+        return models.SponsorByStudent.objects.filter(student_id=self.kwargs['student_id'])
 
     def post(self, request, *args, **kwargs):
-        student = get_object_or_404(Student, pk=kwargs['student_id'])
+        student = get_object_or_404(models.Student, pk=kwargs['student_id'])
         serializer = self.serializer_class(data=request.data, context={'student': student})
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -114,11 +114,11 @@ class SponsorByStudentListCreateView(generics.ListCreateAPIView):
 
 
 class SponsorByStudentUpdateDeleteView(generics.UpdateAPIView, generics.DestroyAPIView):
-    queryset = SponsorByStudent
-    serializer_class = SponsorByStudentSerializer
+    queryset = models.SponsorByStudent
+    serializer_class = serializers.SponsorByStudentSerializer
 
     def get_object(self):
-        return get_object_or_404(SponsorByStudent, pk=self.kwargs['id_sponsor_by_student'])
+        return get_object_or_404(models.SponsorByStudent, pk=self.kwargs['id_sponsor_by_student'])
 
     def update(self, request, *args, **kwargs):
         student = self.get_object().student
@@ -131,9 +131,9 @@ class SponsorByStudentUpdateDeleteView(generics.UpdateAPIView, generics.DestroyA
 
 class DashboardView(APIView):
 
-    @swagger_auto_schema(manual_parameters=get_date())
+    @swagger_auto_schema(manual_parameters=query_params.get_date())
     def get(self, request):
-        money = Student.objects.aggregate(paid_money=Sum('allocated_money'), asked_money=Sum('contract_fee'))
+        money = models.Student.objects.aggregate(paid_money=Sum('allocated_money'), asked_money=Sum('contract_fee'))
         should_be_paid_money = money['asked_money'] - money['paid_money']
 
         data = {"asked_money": money['asked_money'],
@@ -141,14 +141,14 @@ class DashboardView(APIView):
                 "should_be_paid_money": should_be_paid_money}
 
         if self.request.query_params.get('created_at'):
-            created_at = datetime.datetime.strptime(self.request.query_params.get('created_at'),"%d.%m.%Y")
-            number_of_students = Student.objects.filter(created_at__date=created_at).aggregate(number=Count('id'))['number']
-            number_of_sponsors = Sponsor.objects.filter(created_at__date=created_at).aggregate(number=Count('id'))['number']
+            created_at = datetime.datetime.strptime(self.request.query_params.get('created_at'), "%d.%m.%Y")
+            number_of_students = \
+                models.Student.objects.filter(created_at__date=created_at).aggregate(number=Count('id'))['number']
+            number_of_sponsors = \
+                models.Sponsor.objects.filter(created_at__date=created_at).aggregate(number=Count('id'))['number']
             data['number_of_students'] = number_of_students
             data['number_of_sponsors'] = number_of_sponsors
         return Response(data)
-
-
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -172,3 +172,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
         return super().post(request, *args, **kwargs)
 
+
+class UniversityView(generics.ListAPIView):
+    queryset = models.University.objects.all()
+    serializer_class = serializers.UniversitySerializer
