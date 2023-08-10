@@ -16,5 +16,7 @@ urlpatterns = [
     path('set-sponsors/<int:student_id>', views.SponsorByStudentListCreateView.as_view()),
     path('sponsor-by-student/<int:id_sponsor_by_student>/', views.SponsorByStudentUpdateDeleteView.as_view()),
     path('university/', views.UniversityView.as_view()),
-    path('dashboard/', views.DashboardView.as_view()),
+    path('dashboard/<str:created_at>', views.DashboardView.as_view()),
+    path('statistics/', views.StatisticsView.as_view()),
+
 ]

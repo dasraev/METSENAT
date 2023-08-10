@@ -9,12 +9,13 @@ from rest_framework.pagination import PageNumberPagination
 import datetime
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from drf_yasg.utils import swagger_auto_schema
 from . import query_params
 from django.db.models import Sum, Count
 from rest_framework_simplejwt.views import TokenObtainPairView
 import requests
 from django.conf import settings
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework.serializers import ValidationError
 
 
 class Custompagination(PageNumberPagination):
@@ -129,9 +130,8 @@ class SponsorByStudentUpdateDeleteView(generics.UpdateAPIView, generics.DestroyA
         return Response(serializer.data)
 
 
-class DashboardView(APIView):
+class StatisticsView(APIView):
 
-    @swagger_auto_schema(manual_parameters=query_params.get_date())
     def get(self, request):
         money = models.Student.objects.aggregate(paid_money=Sum('allocated_money'), asked_money=Sum('contract_fee'))
         should_be_paid_money = money['asked_money'] - money['paid_money']
@@ -139,16 +139,24 @@ class DashboardView(APIView):
         data = {"asked_money": money['asked_money'],
                 "paid_money": money['paid_money'],
                 "should_be_paid_money": should_be_paid_money}
-
-        if self.request.query_params.get('created_at'):
-            created_at = datetime.datetime.strptime(self.request.query_params.get('created_at'), "%d.%m.%Y")
-            number_of_students = \
-                models.Student.objects.filter(created_at__date=created_at).aggregate(number=Count('id'))['number']
-            number_of_sponsors = \
-                models.Sponsor.objects.filter(created_at__date=created_at).aggregate(number=Count('id'))['number']
-            data['number_of_students'] = number_of_students
-            data['number_of_sponsors'] = number_of_sponsors
         return Response(data)
+
+
+class DashboardView(APIView):
+
+    def get(self, request, created_at):
+        try:
+            created_at = datetime.datetime.strptime(created_at, "%d.%m.%Y")
+        except:
+            raise ValidationError('invalid date format. SHOULD BE: date.month.year')
+        number_of_students = \
+        models.Student.objects.filter(created_at__date=created_at.date()).aggregate(number=Count('id'))[
+            'number']
+        number_of_sponsors = \
+        models.Sponsor.objects.filter(created_at__date=created_at.date()).aggregate(number=Count('id'))['number']
+        return Response({"number_of_students": number_of_students,
+                         "number_of_sponsors": number_of_sponsors}
+                        )
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):

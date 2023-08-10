@@ -13,5 +13,5 @@ def sponsor_filter_by():
     return [application_status,payment_amount,created_at]
 
 def get_date():
-    created_at = openapi.Parameter('created_at',openapi.IN_QUERY,description='d.m.Y-d.m.Y(*date.month.year)',type=openapi.TYPE_STRING)
+    created_at = openapi.Parameter('created_at',openapi.IN_QUERY,description='d.m.Y(*date.month.year)',type=openapi.TYPE_STRING)
     return [created_at]
