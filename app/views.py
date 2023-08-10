@@ -12,6 +12,9 @@ from django.shortcuts import get_object_or_404
 from drf_yasg.utils import swagger_auto_schema
 from .query_params import *
 from django.db.models import Sum, Count
+from rest_framework_simplejwt.views import TokenObtainPairView
+import requests
+from django.conf import settings
 
 
 class Custompagination(PageNumberPagination):
@@ -146,12 +149,6 @@ class DashboardView(APIView):
         return Response(data)
 
 
-# views.py
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework.response import Response
-from rest_framework import status
-import requests
-from django.conf import settings
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
